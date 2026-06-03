@@ -3,5 +3,8 @@ __pycache__/
 *.qgs~
 *.qgz~
 .DS_Store
+.pytest_cache
+.vscode
 Data/
 temp/
+Salida/
