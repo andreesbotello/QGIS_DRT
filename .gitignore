@@ -3,3 +3,5 @@ __pycache__/
 *.qgs~
 *.qgz~
 .DS_Store
+Data/
+temp/

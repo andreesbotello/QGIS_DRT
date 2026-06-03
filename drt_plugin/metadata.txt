@@ -1,0 +1,12 @@
+[general]
+name=Diagnóstico de Representación Territorial (DRT)
+qgisMinimumVersion=3.0
+description=Framework de Diagnóstico de Observabilidad Territorial
+version=0.1
+author=Bryan / Andrés Botello
+email=bryan@example.com
+about=Evalúa la capacidad representacional del territorio y la separabilidad de clases en el feature space.
+tracker=https://github.com/andreesbotello/QGIS_DRT/issues
+repository=https://github.com/andreesbotello/QGIS_DRT
+category=Raster/Vector
+tags=observabilidad, territorial, separabilidad, PCA
