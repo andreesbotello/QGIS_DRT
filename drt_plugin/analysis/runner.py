@@ -109,9 +109,10 @@ def run_memoria1_diagnostics(raster_path, vector_path, class_field, log_callback
 
     # 5. Estructurar metadatos del diagnóstico
     log("Fase 5/5: Compilando resultados y preparando tabla de exportación...")
+    clean_vector_path = vector_path.split('|')[0] if vector_path else ""
     meta = {
         'raster_name': os.path.basename(raster_path),
-        'vector_name': os.path.basename(vector_path),
+        'vector_name': os.path.basename(clean_vector_path),
         'class_field': class_field,
         'timestamp': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
@@ -344,9 +345,10 @@ def run_memoria2_diagnostics(raster_path, vector_path, class_field, log_callback
     )
     log(f"  Índice TLI calculado: {tli_res['tli']:.2f} ({tli_res['clasificacion']})")
 
+    clean_vector_path = vector_path.split('|')[0] if vector_path else ""
     meta = {
         'raster_name': os.path.basename(raster_path),
-        'vector_name': os.path.basename(vector_path),
+        'vector_name': os.path.basename(clean_vector_path),
         'class_field': class_field,
         'timestamp': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }

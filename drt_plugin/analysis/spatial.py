@@ -26,7 +26,22 @@ class SpatialDiagnostics:
         self.raster_ds = gdal.Open(self.raster_path)
         if not self.raster_ds:
             raise IOError(f"No se pudo abrir el archivo ráster: {self.raster_path}")
-        self.vector_gdf = gpd.read_file(self.vector_path)
+
+        # Analizar ruta del vector por si incluye modificadores de proveedor de QGIS (ej. GPKG)
+        clean_vector_path = vector_path
+        vector_layer_name = None
+        if vector_path and "|" in vector_path:
+            parts = vector_path.split("|")
+            clean_vector_path = parts[0]
+            for part in parts[1:]:
+                if part.startswith("layername="):
+                    vector_layer_name = part.split("=", 1)[1]
+
+        # Cargar vector con GeoPandas (especificando la capa si es un GPKG u otro formato multi-capa)
+        if vector_layer_name:
+            self.vector_gdf = gpd.read_file(clean_vector_path, layer=vector_layer_name)
+        else:
+            self.vector_gdf = gpd.read_file(clean_vector_path)
 
     def calculate_zonal_means(self, band_idx=1):
         """Calcula el valor medio de píxeles del ráster para cada polígono del vector (Zonal Stats).

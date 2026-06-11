@@ -29,9 +29,23 @@ El plugin adopta una **arquitectura desacoplada** para garantizar la mantenibili
   └───────────────────────────┘
 ```
 
-*   **/analysis (Backend Puro):** Contiene la lógica matemática, estadística y geoespacial. **No tiene dependencias de `qgis.core` ni `qgis.gui`**. Esto permite que toda la lógica científica sea testeada mediante pruebas unitarias rápidas utilizando un intérprete estándar de Python.
-*   **/ui y /core (Frontend QGIS):** Encargados de interactuar con la interfaz de QGIS, leer las capas seleccionadas por el usuario, convertirlas a estructuras de datos estándar (como DataFrames de Pandas, arrays de NumPy o GeoDataFrames) y enviarlas al backend.
-*   **/reports:** Encargado de compilar los resultados matemáticos y las visualizaciones generadas en reportes interactivos HTML o documentos PDF listos para impresión.
+*   **/analysis (Backend Puro):** Contiene la lógica matemática, estadística y geoespacial. **No tiene dependencias de `qgis.core` ni `qgis.gui`**, lo que permite que sea testeado mediante pruebas unitarias rápidas fuera de QGIS.
+    *   [runner.py](drt_plugin/analysis/runner.py): Coordinador principal que encadena los diagnósticos secuenciales de Memoria 1 y Memoria 2.
+    *   [compatibility.py](drt_plugin/analysis/compatibility.py): Clase `SpatialCompatibility` que evalúa CRS, alineamientos de extensión y ratio de cobertura efectiva de polígonos.
+    *   [spectral.py](drt_plugin/analysis/spectral.py): Clase `SpectralDiagnostics` encargada de estadísticas de bandas, correlación cruzada de redundancia y PCA global.
+    *   [spatial.py](drt_plugin/analysis/spatial.py): Clase `SpatialDiagnostics` que calcula Moran's I global y ajusta el semivariograma empírico para modelar la estructura espacial.
+    *   [indexes.py](drt_plugin/analysis/indexes.py): Lógica de cálculo sintético ponderado de los índices TOI y TLI.
+    *   [features.py](drt_plugin/analysis/features.py): Clase `FeatureExtractor` para la construcción del Objeto Territorial mediante extracción de descriptores espectrales, texturales (GLCM), variográficos locales, geométricos y topológicos.
+    *   [separability.py](drt_plugin/analysis/separability.py): Clase `SeparabilityDiagnostics` que implementa colinealidad, clustering no supervisado con K-Means, reducciones de dimensionalidad UMAP/t-SNE, matrices de confusión y cálculo de distancias estadísticas (Mahalanobis, Bhattacharyya).
+*   **/ui y /core (Frontend QGIS):** Encargados de interactuar con la interfaz de QGIS, leer las capas seleccionadas por el usuario, convertirlas a estructuras de datos estándar y enviarlas al backend.
+    *   [plugin.py](drt_plugin/plugin.py): Punto de entrada y ciclo de vida del plugin en QGIS (menú y barra de herramientas).
+    *   [main_dockwidget.py](drt_plugin/ui/main_dockwidget.py): Controlador de UI que maneja eventos, selección de capas y campos, y activa las corridas.
+    *   [main_dockwidget.ui](drt_plugin/ui/main_dockwidget.ui): Archivo de diseño XML PyQt/QtDesigner.
+*   **/reports:** Encargado de compilar los resultados analíticos en reportes interactivos HTML.
+    *   [generator.py](drt_plugin/reports/generator.py): Integración con Jinja2 para estructurar los datos y exportar el reporte dinámico.
+*   **/tests:** Pruebas unitarias de integración rápidas ejecutables fuera de QGIS.
+    *   [test_compatibility.py](drt_plugin/tests/test_compatibility.py): Pruebas de integración del backend para Memoria 1.
+    *   [test_separability.py](drt_plugin/tests/test_separability.py): Pruebas de construcción de objetos territoriales y separabilidad para Memoria 2.
 
 ---
 
@@ -149,7 +163,7 @@ graph TD
     Para que QGIS reconozca el plugin en desarrollo, se recomienda crear un enlace simbólico de la carpeta `drt_plugin` en el directorio de plugins de su perfil de QGIS.
     *   **Windows (PowerShell Administrador):**
         ```powershell
-        New-Item -ItemType SymbolicLink -Path "$env:APPDATA\QGIS\QGIS3\profiles\default\python\plugins\drt_plugin" -Value "C:\Ruta\A\Su\Proyecto\ProyectoFinal\drt_plugin"
+        New-Item -ItemType SymbolicLink -Path "$env:APPDATA\QGIS\QGIS3\profiles\default\python\plugins\drt_plugin" -Value "C:\Ruta\A\Su\Repositorio\drt_plugin"
         ```
 3.  **Instalar dependencias de desarrollo** en su entorno de Python preferido para pruebas:
     ```bash
@@ -176,7 +190,7 @@ Para cargar, visualizar y validar el plugin directamente en la aplicación de es
 ### 1. Enlace del Plugin al Perfil de QGIS
 QGIS busca los complementos de usuario en una ruta específica dentro de la carpeta de datos de la aplicación. Para evitar copiar manualmente los archivos en cada cambio, se debe crear un enlace simbólico (Symbolic Link) desde la terminal de PowerShell en modo Administrador:
 ```powershell
-New-Item -ItemType SymbolicLink -Path "$env:APPDATA\QGIS\QGIS3\profiles\default\python\plugins\drt_plugin" -Value "c:\Users\bryan\Desktop\UPV\S2\3_DAS\ProyectoFinal\drt_plugin"
+New-Item -ItemType SymbolicLink -Path "$env:APPDATA\QGIS\QGIS3\profiles\default\python\plugins\drt_plugin" -Value "C:\Ruta\A\Su\Repositorio\drt_plugin"
 ```
 
 ### 2. Activación del Plugin en QGIS

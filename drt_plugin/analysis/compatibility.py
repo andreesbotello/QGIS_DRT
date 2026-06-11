@@ -23,24 +23,39 @@ class SpatialCompatibility:
         self.vector_path = vector_path
         self.raster_ds = None
         self.vector_gdf = None
+        
+        # Analizar ruta del vector por si incluye modificadores de proveedor de QGIS (ej. GPKG)
+        self.clean_vector_path = vector_path
+        self.vector_layer_name = None
+        if vector_path and "|" in vector_path:
+            parts = vector_path.split("|")
+            self.clean_vector_path = parts[0]
+            for part in parts[1:]:
+                if part.startswith("layername="):
+                    self.vector_layer_name = part.split("=", 1)[1]
+
         self._load_data()
 
     def _load_data(self):
         """Carga el ráster usando GDAL y el vector usando GeoPandas."""
         if not os.path.exists(self.raster_path):
             raise FileNotFoundError(f"Archivo ráster no encontrado: {self.raster_path}")
-        if not os.path.exists(self.vector_path):
-            raise FileNotFoundError(f"Archivo vectorial no encontrado: {self.vector_path}")
+        if not os.path.exists(self.clean_vector_path):
+            raise FileNotFoundError(f"Archivo vectorial no encontrado: {self.clean_vector_path}")
 
         # Cargar ráster con GDAL
         self.raster_ds = gdal.Open(self.raster_path)
         if not self.raster_ds:
             raise IOError(f"No se pudo abrir el archivo ráster: {self.raster_path}")
 
-        # Cargar vector con GeoPandas
-        self.vector_gdf = gpd.read_file(self.vector_path)
+        # Cargar vector con GeoPandas (especificando la capa si es un GPKG u otro formato multi-capa)
+        if self.vector_layer_name:
+            self.vector_gdf = gpd.read_file(self.clean_vector_path, layer=self.vector_layer_name)
+        else:
+            self.vector_gdf = gpd.read_file(self.clean_vector_path)
+
         if self.vector_gdf.empty:
-            raise ValueError(f"El archivo vectorial cargado está vacío: {self.vector_path}")
+            raise ValueError(f"El archivo vectorial cargado está vacío: {self.clean_vector_path}")
 
     def check_crs(self):
         """Compara los CRS de ambas fuentes y reproyecta el vector si es necesario.
