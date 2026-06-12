@@ -22,7 +22,7 @@
       </property>
       <widget class="QWidget" name="tabConfig">
        <attribute name="title">
-        <string>Configuración</string>
+        <string>Datos Iniciales</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayoutConfig">
         <item>
@@ -154,6 +154,61 @@
          </widget>
         </item>
         <item>
+         <widget class="QGroupBox" name="groupBandConfig">
+          <property name="title">
+           <string>Calcular Índices Espectrales (NDVI/NDWI)</string>
+          </property>
+          <property name="checkable">
+           <bool>true</bool>
+          </property>
+          <property name="checked">
+           <bool>false</bool>
+          </property>
+          <layout class="QGridLayout" name="gridLayoutBands">
+           <item row="0" column="0">
+            <widget class="QLabel" name="lblSensorPreset">
+             <property name="text">
+              <string>Sensor / Preset:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QComboBox" name="comboSensorPreset"/>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="lblGreenBand">
+             <property name="text">
+              <string>Banda Verde:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QComboBox" name="comboGreenBand"/>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="lblRedBand">
+             <property name="text">
+              <string>Banda Roja:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QComboBox" name="comboRedBand"/>
+           </item>
+           <item row="3" column="0">
+            <widget class="QLabel" name="lblNirBand">
+             <property name="text">
+              <string>Banda NIR:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="1">
+            <widget class="QComboBox" name="comboNirBand"/>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
          <spacer name="verticalSpacer">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
@@ -175,6 +230,133 @@
            <string>Ejecutar Memoria 1 (Observabilidad)</string>
           </property>
          </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tabObjetoTerritorial">
+       <attribute name="title">
+        <string>Objeto Territorial</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayoutOT">
+        <item>
+         <widget class="QLabel" name="inputCsvLabel">
+          <property name="text">
+           <string>Datos de Entrada (CSV Fase 1):</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="inputCsvLayout">
+          <item>
+           <widget class="QLineEdit" name="txtInputCsv">
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QToolButton" name="btnBrowseInputCsv">
+            <property name="text">
+             <string>...</string>
+            </property>
+            <property name="toolTip">
+             <string>Seleccionar archivo CSV de píxeles crudos...</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <spacer name="verticalSpacerOT_1">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Fixed</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>10</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="toiLayout">
+          <item>
+           <widget class="QLabel" name="lblTOITitle">
+            <property name="text">
+             <string>Índice de Observabilidad (TOI):</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="lblTOIResult">
+            <property name="font">
+             <font>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>No calculado</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <spacer name="verticalSpacerOT_2">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Fixed</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>10</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QLabel" name="rawLabel">
+          <property name="text">
+           <string>Almacenar datos crudos (sin depurar colinealidad):</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboRawData">
+          <item>
+           <property name="text">
+            <string>No (Recomendado - Depurar)</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Sí (Almacenar todo)</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item>
+         <spacer name="verticalSpacerOT_3">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Expanding</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
         </item>
         <item>
          <widget class="QPushButton" name="btnExecuteM2">

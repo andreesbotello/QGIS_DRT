@@ -706,7 +706,8 @@ class ReportGenerator:
             </div>
             <div class="card">
                 <h3>Métricas de Agrupación</h3>
-                <p><strong>K Óptimo Seleccionado:</strong> {{ results.clustering.optimal_k }}</p>
+                <p><strong>K Óptimo Seleccionado:</strong> {{ results.clustering.optimal_k }} (Criterio: Método del Codo)</p>
+                <p style="font-size: 12px; color: #64748b; margin-top: -10px; margin-bottom: 15px;">* El número óptimo de clústeres se determina mediante el algoritmo de máxima distancia a la secante (Método del Codo) en la curva de inercia, evitando el sesgo binario (K=2) típico del Índice de Silueta.</p>
                 <p><strong>Silhouette Score del K Óptimo:</strong> {{ "%.4f"|format(results.clustering.optimal_silhouette) }}</p>
                 
                 <table>

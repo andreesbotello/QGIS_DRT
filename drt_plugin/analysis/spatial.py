@@ -225,7 +225,6 @@ class SpatialDiagnostics:
 
         # Ajuste de un modelo esférico básico
         def spherical_model(h, nugget, partial_sill, range_a):
-            # Asegurar parámetros físicamente posibles
             nugget = abs(nugget)
             partial_sill = abs(partial_sill)
             range_a = abs(range_a) if abs(range_a) > 0 else 1.0
@@ -237,6 +236,16 @@ class SpatialDiagnostics:
             )
             return result
 
+        # Ajuste de un modelo de efecto hoyo
+        def hole_effect_model(h, nugget, partial_sill, range_a):
+            nugget = abs(nugget)
+            partial_sill = abs(partial_sill)
+            range_a = abs(range_a) if abs(range_a) > 0 else 1.0
+
+            h_safe = np.where(h == 0.0, 1e-20, h)
+            val = np.sin(np.pi * h_safe / range_a) / (np.pi * h_safe / range_a)
+            return nugget + partial_sill * (1.0 - val)
+
         # Estimaciones iniciales
         est_nugget = empirical_semivariance[0] if len(empirical_semivariance) > 0 else 0.0
         est_sill = np.var(values)
@@ -245,22 +254,56 @@ class SpatialDiagnostics:
         p0 = [est_nugget, est_sill - est_nugget, est_range]
         bounds = ([0.0, 0.0, 0.0], [est_sill * 2, est_sill * 5, cutoff_dist * 1.5])
 
-        # Ajuste de curvas por mínimos cuadrados
+        # Ajustar ambos modelos y elegir el de menor error cuadrático medio (MSE)
+        fit_sph_nugget, fit_sph_sill, fit_sph_range = est_nugget, est_sill, est_range
+        sph_mse = float('inf')
+        sph_success = False
+        
         try:
-            popt, _ = curve_fit(spherical_model, bin_centers, empirical_semivariance, p0=p0, bounds=bounds, maxfev=5000)
-            fit_nugget = float(popt[0])
-            fit_sill = float(popt[0] + popt[1])
-            fit_range = float(popt[2])
+            popt_sph, _ = curve_fit(spherical_model, bin_centers, empirical_semivariance, p0=p0, bounds=bounds, maxfev=5000)
+            fit_sph_nugget = float(popt_sph[0])
+            fit_sph_sill = float(popt_sph[0] + popt_sph[1])
+            fit_sph_range = float(popt_sph[2])
+            
+            y_pred_sph = spherical_model(bin_centers, *popt_sph)
+            sph_mse = float(np.mean((np.array(empirical_semivariance) - y_pred_sph) ** 2))
+            sph_success = True
         except Exception:
-            # Fallback en caso de fallo en la convergencia numérica
-            fit_nugget = float(est_nugget)
-            fit_sill = float(est_sill)
-            fit_range = float(est_range)
+            pass
+
+        fit_hole_nugget, fit_hole_sill, fit_hole_range = est_nugget, est_sill, est_range
+        hole_mse = float('inf')
+        hole_success = False
+        
+        try:
+            popt_hole, _ = curve_fit(hole_effect_model, bin_centers, empirical_semivariance, p0=p0, bounds=bounds, maxfev=5000)
+            fit_hole_nugget = float(popt_hole[0])
+            fit_hole_sill = float(popt_hole[0] + popt_hole[1])
+            fit_hole_range = float(popt_hole[2])
+            
+            y_pred_hole = hole_effect_model(bin_centers, *popt_hole)
+            hole_mse = float(np.mean((np.array(empirical_semivariance) - y_pred_hole) ** 2))
+            hole_success = True
+        except Exception:
+            pass
+
+        # Seleccionar el mejor modelo
+        if hole_success and (not sph_success or hole_mse < sph_mse):
+            fit_nugget = fit_hole_nugget
+            fit_sill = fit_hole_sill
+            fit_range = fit_hole_range
+            model_name = "efecto_hoyo"
+        else:
+            fit_nugget = fit_sph_nugget
+            fit_sill = fit_sph_sill
+            fit_range = fit_sph_range
+            model_name = "esferico"
 
         return {
             'lags': bin_centers.tolist(),
             'semivarianza_empirica': [float(x) for x in empirical_semivariance],
             'nugget': fit_nugget,
             'sill': fit_sill,
-            'rango': fit_range
+            'rango': fit_range,
+            'modelo': model_name
         }

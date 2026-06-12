@@ -16,11 +16,12 @@ from sklearn.feature_selection import mutual_info_classif
 class SeparabilityDiagnostics:
     """Realiza análisis multidimensionales de colinealidad, clustering, proyección 2D y separabilidad."""
 
-    def __init__(self, df_features):
+    def __init__(self, df_features, filter_collinearity=False):
         """Inicializa con el DataFrame de descriptores del Objeto Territorial.
 
         Args:
             df_features (pd.DataFrame): Tabla de descriptores generada en la Fase 3.
+            filter_collinearity (bool): Si es True, filtra variables colineales (|r| > 0.85).
         """
         self.df = df_features.copy()
         
@@ -32,10 +33,43 @@ class SeparabilityDiagnostics:
         stds = self.df[self.feature_cols].std()
         self.feature_cols = [col for col in self.feature_cols if stds[col] > 0]
         
-        self.X_raw = self.df[self.feature_cols].values
         self.y_label = self.df['clase'].values
+
+        if filter_collinearity and len(self.feature_cols) > 1:
+            # Estandarizar descriptores preliminarmente para calcular Mutual Information
+            scaler_init = StandardScaler()
+            X_init = scaler_init.fit_transform(self.df[self.feature_cols].values)
+            mi_scores = mutual_info_classif(X_init, self.y_label, random_state=42)
+            mi_dict = dict(zip(self.feature_cols, mi_scores))
+            
+            # Matriz de correlación
+            corr_matrix = pd.DataFrame(self.df[self.feature_cols].values, columns=self.feature_cols).corr(method='pearson')
+            
+            # Filtrar redundancia
+            to_remove = set()
+            cols_list = self.feature_cols.copy()
+            for i in range(len(cols_list)):
+                col_a = cols_list[i]
+                if col_a in to_remove:
+                    continue
+                for j in range(i + 1, len(cols_list)):
+                    col_b = cols_list[j]
+                    if col_b in to_remove:
+                        continue
+                    r = corr_matrix.loc[col_a, col_b]
+                    if abs(r) > 0.85:
+                        mi_a = mi_dict.get(col_a, 0.0)
+                        mi_b = mi_dict.get(col_b, 0.0)
+                        if mi_a < mi_b:
+                            to_remove.add(col_a)
+                            break
+                        else:
+                            to_remove.add(col_b)
+            self.feature_cols = [col for col in self.feature_cols if col not in to_remove]
+
+        self.X_raw = self.df[self.feature_cols].values
         
-        # Estandarizar descriptores
+        # Estandarizar descriptores finales
         self.scaler = StandardScaler()
         self.X_scaled = self.scaler.fit_transform(self.X_raw)
 
@@ -118,17 +152,13 @@ class SeparabilityDiagnostics:
         return mi_list
 
     def analyze_clustering(self):
-        """Aplica K-Means variando K entre 2 y 8, y selecciona la solución óptima.
+        """Aplica K-Means variando K entre 2 y 8, y selecciona la solución óptima usando el Método del Codo.
 
         Returns:
             dict: Estadísticas de agrupamiento y etiquetas óptimas asignadas.
         """
         k_values = list(range(2, min(9, len(self.df))))
         clustering_results = []
-        
-        best_k = 2
-        best_silhouette = -1.0
-        best_labels = None
         
         for k in k_values:
             kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
@@ -145,11 +175,40 @@ class SeparabilityDiagnostics:
                 'inertia': inertia
             })
             
-            # Maximizar Silhouette Score para el K óptimo
-            if sil > best_silhouette:
-                best_silhouette = sil
-                best_k = k
-                best_labels = labels
+        # Si hay suficientes puntos, aplicar método del codo mediante distancia a la secante
+        if len(k_values) >= 3:
+            k1 = k_values[0]
+            i1 = clustering_results[0]['inertia']
+            k2 = k_values[-1]
+            i2 = clustering_results[-1]['inertia']
+            
+            # Coeficientes de la recta Ax + By + C = 0
+            A = i2 - i1
+            B = k1 - k2
+            C = k2 * i1 - k1 * i2
+            
+            max_distance = -1.0
+            best_idx = 0
+            
+            for idx, res in enumerate(clustering_results):
+                k0 = res['k']
+                i0 = res['inertia']
+                # Distancia perpendicular (el numerador es suficiente para maximizar)
+                dist = abs(A * k0 + B * i0 + C)
+                if dist > max_distance:
+                    max_distance = dist
+                    best_idx = idx
+            
+            best_k = clustering_results[best_idx]['k']
+            best_silhouette = clustering_results[best_idx]['silhouette']
+            kmeans = KMeans(n_clusters=best_k, random_state=42, n_init=10)
+            best_labels = kmeans.fit_predict(self.X_scaled)
+        else:
+            # Fallback si no hay suficientes puntos
+            best_k = clustering_results[0]['k'] if clustering_results else 2
+            best_silhouette = clustering_results[0]['silhouette'] if clustering_results else 0.0
+            kmeans = KMeans(n_clusters=best_k, random_state=42, n_init=10)
+            best_labels = kmeans.fit_predict(self.X_scaled)
 
         return {
             'scores': clustering_results,

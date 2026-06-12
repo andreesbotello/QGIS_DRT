@@ -255,13 +255,22 @@ def extract_raw_pixels(ds, gdf, class_field):
         df_out = df_out.dropna()
     return df_out
 
-def run_memoria2_diagnostics(raster_path, vector_path, class_field, log_callback=None):
+def run_memoria2_diagnostics(raster_path, vector_path, class_field, 
+                             input_csv=None, 
+                             filter_collinearity=False, 
+                             green_band=None, red_band=None, nir_band=None, 
+                             log_callback=None):
     """Ejecuta la secuencia de construcción del Objeto Territorial (Fase 3) y la Memoria 2 (Fase 4).
 
     Args:
         raster_path (str): Ruta al archivo ráster (.tif).
         vector_path (str): Ruta al archivo vectorial (.shp).
         class_field (str): Campo de clase del vector.
+        input_csv (str): Ruta al CSV de píxeles crudos (opcional).
+        filter_collinearity (bool): Si es True, filtra descriptores altamente correlacionados.
+        green_band (int): Índice de la banda verde.
+        red_band (int): Índice de la banda roja.
+        nir_band (int): Índice de la banda NIR.
         log_callback (function): Función para registrar mensajes.
 
     Returns:
@@ -290,7 +299,11 @@ def run_memoria2_diagnostics(raster_path, vector_path, class_field, log_callback
         raise IOError(f"No se pudo abrir el ráster para extracción de descriptores: {raster_path}")
 
     # Extraer variables espectrales, texturales (GLCM), locales (variografía), geométricas y topológicas
-    extractor = FeatureExtractor(ds, compat.vector_gdf)
+    extractor = FeatureExtractor(
+        ds, compat.vector_gdf, 
+        green_band=green_band, red_band=red_band, nir_band=nir_band, 
+        input_csv=input_csv
+    )
     df_features = extractor.extract_features(class_field, log_callback=log)
     log(f"  Extracción completada. Generados {len(df_features)} objetos con {df_features.shape[1] - 2} descriptores cada uno.")
 
@@ -298,7 +311,7 @@ def run_memoria2_diagnostics(raster_path, vector_path, class_field, log_callback
     log("Fase 3/4: Evaluando colinealidad y clustering exploratorio (M3)...")
     from .separability import SeparabilityDiagnostics
     
-    diag = SeparabilityDiagnostics(df_features)
+    diag = SeparabilityDiagnostics(df_features, filter_collinearity=filter_collinearity)
     
     log("  Comprobando correlación y variables colineales...")
     collin = diag.analyze_collinearity()
