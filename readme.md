@@ -78,3 +78,45 @@ Ve al menú superior de QGIS: **Complementos** -> **DRT** -> **Diagnóstico de R
 5.  Al finalizar, el plugin generará el reporte de aprendibilidad **HTML** de la Memoria 2 y mostrará la puntuación **TLI** (Territorial Learnability Index) en la pantalla de control.
 
 *Nota: Los reportes generados en formato HTML se pueden abrir en cualquier navegador web y exportar a PDF.
+
+---
+
+## Arquitectura del Plugin
+
+El plugin DRT sigue un diseño desacoplado que separa la interfaz gráfica de usuario en QGIS de los algoritmos de cálculo matemático y procesamiento espacial (backend). Esto asegura la modularidad del código y permite probar la lógica de procesamiento de forma independiente a la interfaz gráfica.
+
+### Estructura de Directorios
+
+La estructura de carpetas de `drt_plugin` se organiza de la siguiente manera:
+
+*   **`ui/` (Frontend / Interfaz de Usuario)**:
+    *   `main_dockwidget.ui`: Interfaz de usuario diseñada en QtDesigner (formato XML).
+    *   `main_dockwidget.py`: Controlador de la UI que vincula los eventos y maneja la lógica de las pestañas principales.
+    *   `dependency_dialog.ui` / `dependency_dialog.py`: Diálogo y lógica para la instalación e indicación del progreso de dependencias científicas ausentes.
+*   **`analysis/` (Backend Analítico)**:
+    *   Es un módulo escrito en Python puro, completamente independiente de las APIs de QGIS (`qgis.core` o `qgis.gui`).
+    *   `runner.py`: Coordinador y tubería (pipeline) secuencial que ejecuta los diagnósticos analíticos.
+    *   `compatibility.py`: Validación espacial (comprobación de CRS, extensión y alineamiento).
+    *   `spectral.py`: Estadísticas descriptivas de bandas y PCA global.
+    *   `spatial.py`: Autocorrelación espacial global (Índice de Moran) y modelado de semivariogramas empíricos.
+    *   `features.py`: Extracción de descriptores del objeto territorial (espectrales, GLCM, variografía local, geometría y topología).
+    *   `separability.py`: Análisis de colinealidad, clustering K-Means, visualización latente t-SNE, distancias interclase y cálculo del TLI.
+    *   `indexes.py`: Lógica para calcular el índice TOI.
+*   **`reports/` (Generador de Reportes)**:
+    *   `generator.py`: Convierte las estructuras de datos recopiladas en los diagnósticos en páginas HTML dinámicas que contienen tablas de datos y gráficos vectoriales embebidos en Base64.
+*   **`core/` (Utilidades del Entorno)**:
+    *   `dependency_manager.py`: Verifica la presencia de dependencias (`geopandas`, `scikit-learn`, `scipy`, etc.) y realiza su instalación silenciosa usando `pip install --user`.
+
+### Interacción entre Componentes
+
+```mermaid
+graph TD
+    UI[Controlador de UI: main_dockwidget.py] -->|1. Valida y recopila datos| Dep[dependency_manager.py]
+    UI -->|2. Llama secuencia de analisis| Run[runner.py]
+    Run -->|3a. Ejecuta metodos espaciales| Comp[compatibility.py]
+    Run -->|3b. Extrae descriptores| Feat[features.py]
+    Run -->|3c. Evalua clasificaciones y distancias| Sep[separability.py]
+    Run -->|4. Retorna DataFrames y resultados| UI
+    UI -->|5. Genera documentos finales| Gen[generator.py]
+    Gen -->|6. Escribe en disco| Out["Ficheros HTML / CSV / GPKG / SHP"]
+```
