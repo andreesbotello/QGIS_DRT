@@ -389,4 +389,10 @@ def run_memoria2_diagnostics(raster_path, vector_path, class_field,
     # Cerrar dataset
     ds = None
     
+    # Filtrar columnas colineales si se solicita depurar colinealidad (Datos crudos == No)
+    if filter_collinearity:
+        cols_to_keep = ['objeto_id', 'clase'] + diag.feature_cols
+        cols_to_keep = [c for c in cols_to_keep if c in df_features.columns]
+        df_features = df_features[cols_to_keep]
+    
     return results, df_features

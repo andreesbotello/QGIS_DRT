@@ -34,7 +34,6 @@ class DRTDockWidget(BASE_CLASS, FORM_CLASS):
         self.btnBrowseRaster.clicked.connect(self._on_browse_raster)
         self.btnBrowseVector.clicked.connect(self._on_browse_vector)
         self.btnBrowseOutputDir.clicked.connect(self._on_browse_output_dir)
-        self.btnBrowseInputCsv.clicked.connect(self._on_browse_input_csv)
         self.btnClearLog.clicked.connect(self._on_clear_log)
         self.comboSensorPreset.currentIndexChanged.connect(self._on_sensor_preset_changed)
 
@@ -46,6 +45,31 @@ class DRTDockWidget(BASE_CLASS, FORM_CLASS):
         QgsProject.instance().layersRemoved.connect(self.populate_layers)
 
         self.populate_layers()
+
+        # Verificación asíncrona de dependencias científicas al arranque
+        from qgis.PyQt.QtCore import QTimer
+        QTimer.singleShot(200, self._check_dependencies_on_startup)
+
+    def _check_dependencies_interactive(self):
+        """Verifica dependencias e inicia el diálogo de instalación amigable si faltan.
+
+        Returns:
+            bool: True si las dependencias están disponibles/instaladas, False en caso contrario.
+        """
+        from ..core.dependency_manager import DependencyManager
+        missing = DependencyManager.check_missing_dependencies()
+        if not missing:
+            return True
+
+        from .dependency_dialog import DependencyDialog
+        dialog = DependencyDialog(missing, self)
+        return dialog.exec_() == DependencyDialog.Accepted
+
+    def _check_dependencies_on_startup(self):
+        """Realiza un chequeo silencioso al inicio y lanza el diálogo si falta algo."""
+        from ..core.dependency_manager import DependencyManager
+        if DependencyManager.check_missing_dependencies():
+            self._check_dependencies_interactive()
 
     def populate_layers(self, *args, **kwargs):
         """Carga y filtra las capas del proyecto activo en sus comboboxes respectivos."""
@@ -140,6 +164,9 @@ class DRTDockWidget(BASE_CLASS, FORM_CLASS):
         vector_path = vector_layer.source()
 
         # Validaciones preliminares de consistencia espacial
+        if not self._check_dependencies_interactive():
+            return
+
         try:
             from ..analysis.compatibility import SpatialCompatibility
             compat = SpatialCompatibility(raster_path, vector_path)
@@ -291,6 +318,9 @@ class DRTDockWidget(BASE_CLASS, FORM_CLASS):
         vector_path = vector_layer.source()
 
         # Validaciones preliminares de consistencia espacial
+        if not self._check_dependencies_interactive():
+            return
+
         try:
             from ..analysis.compatibility import SpatialCompatibility
             compat = SpatialCompatibility(raster_path, vector_path)
@@ -365,14 +395,36 @@ class DRTDockWidget(BASE_CLASS, FORM_CLASS):
 
             # Rutas de salida físicas
             html_path = os.path.join(output_dir, f"{base_name}_m2.html")
-            csv_path = os.path.join(output_dir, f"{base_name}_m2.csv")
+            output_format_idx = self.comboOutputFormat.currentIndex()
 
             self.log("Guardando archivos de salida...")
-            # Guardar reporte HTML y tabla CSV
             ReportGenerator.generate_m2_report(results, html_path)
-            export_df.to_csv(csv_path, index=False, encoding='utf-8')
             self.log(f"  Reporte HTML guardado en: {html_path}")
-            self.log(f"  Fichero CSV guardado en: {csv_path}")
+
+            if output_format_idx == 0:
+                # CSV
+                csv_path = os.path.join(output_dir, f"{base_name}_m2.csv")
+                export_df.to_csv(csv_path, index=False, encoding='utf-8')
+                self.log(f"  Fichero CSV guardado en: {csv_path}")
+                path_msg = f"- Datos CSV: {csv_path}"
+            elif output_format_idx == 1:
+                # GPKG
+                gpkg_path = os.path.join(output_dir, f"{base_name}_m2.gpkg")
+                import geopandas as gpd
+                geometries = export_df['objeto_id'].map(lambda oid: compat.vector_gdf.geometry.iloc[oid - 1])
+                gdf_out = gpd.GeoDataFrame(export_df, geometry=geometries, crs=compat.vector_gdf.crs)
+                gdf_out.to_file(gpkg_path, driver="GPKG")
+                self.log(f"  Fichero GeoPackage (GPKG) guardado en: {gpkg_path}")
+                path_msg = f"- Datos GeoPackage: {gpkg_path}"
+            else:
+                # SHP
+                shp_path = os.path.join(output_dir, f"{base_name}_m2.shp")
+                import geopandas as gpd
+                geometries = export_df['objeto_id'].map(lambda oid: compat.vector_gdf.geometry.iloc[oid - 1])
+                gdf_out = gpd.GeoDataFrame(export_df, geometry=geometries, crs=compat.vector_gdf.crs)
+                gdf_out.to_file(shp_path, driver="ESRI Shapefile")
+                self.log(f"  Fichero Shapefile (SHP) guardado en: {shp_path}")
+                path_msg = f"- Datos Shapefile: {shp_path}"
 
             self.setCursor(QCursor(Qt.ArrowCursor))
 
@@ -383,7 +435,7 @@ class DRTDockWidget(BASE_CLASS, FORM_CLASS):
                 f"El análisis de la Memoria 2 ha finalizado correctamente.\n\n"
                 f"Archivos generados en:\n"
                 f"- Reporte HTML: {html_path}\n"
-                f"- Datos CSV: {csv_path}\n\n"
+                f"{path_msg}\n\n"
                 f"Puntaje TLI: {results['tli']['tli']:.2f} ({results['tli']['clasificacion']})\n\n"
                 f"Nota: Puede abrir el reporte HTML en su navegador e imprimirlo como PDF."
             )
@@ -480,16 +532,7 @@ class DRTDockWidget(BASE_CLASS, FORM_CLASS):
         self.txtLog.clear()
         self.txtLog.append("Esperando inicio del proceso de diagnóstico...")
 
-    def _on_browse_input_csv(self):
-        """Abre un diálogo de búsqueda de archivos para cargar el CSV de Fase 1."""
-        file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            "Seleccionar archivo CSV de píxeles crudos (Fase 1)",
-            "",
-            "CSV (*.csv);;Todos los archivos (*.*)"
-        )
-        if file_path:
-            self.txtInputCsv.setText(file_path)
+
 
     def _on_raster_changed(self):
         """Actualiza los selectores de bandas espectrales al cambiar el ráster."""

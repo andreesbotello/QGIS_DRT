@@ -15,8 +15,9 @@ from drt_plugin.analysis.features import FeatureExtractor
 from drt_plugin.analysis.separability import SeparabilityDiagnostics
 from drt_plugin.analysis.runner import run_memoria2_diagnostics
 
-RASTER_PATH = r"c:\Users\bryan\Desktop\UPV\S2\3_DAS\ProyectoFinal\Data\L8Toa.tif"
-VECTOR_PATH = r"c:\Users\bryan\Desktop\UPV\S2\3_DAS\ProyectoFinal\Data\valle1.shp"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+RASTER_PATH = os.path.join(BASE_DIR, "Data", "L8Toa.tif")
+VECTOR_PATH = os.path.join(BASE_DIR, "Data", "valle1.shp")
 
 def test_feature_extraction():
     """Valida la extracción de descriptores espectrales, texturales (GLCM), variográficos y geométricos."""

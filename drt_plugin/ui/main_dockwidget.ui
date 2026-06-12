@@ -254,16 +254,6 @@
             </property>
            </widget>
           </item>
-          <item>
-           <widget class="QToolButton" name="btnBrowseInputCsv">
-            <property name="text">
-             <string>...</string>
-            </property>
-            <property name="toolTip">
-             <string>Seleccionar archivo CSV de píxeles crudos...</string>
-            </property>
-           </widget>
-          </item>
          </layout>
         </item>
         <item>
@@ -338,6 +328,32 @@
           <item>
            <property name="text">
             <string>Sí (Almacenar todo)</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="outputFormatLabel">
+          <property name="text">
+           <string>Formato de Salida de Descriptores:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboOutputFormat">
+          <item>
+           <property name="text">
+            <string>CSV (Fichero Tabular)</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>GeoPackage (GPKG - Objeto Espacial)</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Shapefile (SHP - Objeto Espacial)</string>
            </property>
           </item>
          </widget>
